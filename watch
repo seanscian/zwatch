@@ -4,10 +4,10 @@ declare -i TICKS=2
 declare TBAR=true
 
 _help() {
-	print -u2 -f "\nUsage:\n ${1:t} [options] command\n\nOptions:\n  -n <secs>       seconds to wait between updates\n  -t              turn off header\n\n -h         display this help and exit\n -v         output version information and exit\n\nThere are no more details yet.\n"
+	print -u2 -f "\nUsage:\n ${1:t} [options] command\n\nOptions:\n  -n, --interval <secs>  seconds to wait between updates\n  -t, --no-title         turn off header\n\n -h, --help     display this help and exit\n -v, --version  output version information and exit\n\nThere are no more details yet.\n"
 }
 
-while getopts :vhtn: XTRA
+while getopts :vhtn:-: XTRA
 do
 	case ${XTRA} in
 		"v")
@@ -35,7 +35,24 @@ do
 			_help "$0"
 			exit 22
 			;;
-
+		'-')
+			case "${OPTARG}" in
+				"help")
+					_help "$0"
+					exit 0
+					;;
+				"version")
+					print 'watch in zsh 1.0.0'
+					exit 0
+					;;
+				"interval")
+					TICKS="${*[$OPTIND]}"
+					OPTIND=$((OPTIND+1))
+					;;
+				"no-title")
+					TBAR=false
+					;;
+			esac
 	esac
 done
 
@@ -51,6 +68,7 @@ header_loop() {
 clear
 $TBAR && header_loop "$@"
 $TBAR && ROSE=$((${LINES}-2)) || ROSE=$((${LINES}-1))
+# "$@" | head -$((${ROSE})) | cut -c-${COLUMNS}
 "$@" | head -$((${ROSE})) | sed -e 's/	/     /g' | cut -c-${COLUMNS}
  
 while sleep ${TICKS}
