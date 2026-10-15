@@ -1,0 +1,62 @@
+#!/bin/zsh
+local TBAR TICKS ROSE
+declare -i TICKS=2
+declare TBAR=true
+
+_help() {
+	print -u2 -f "\nUsage:\n ${1:t} [options] command\n\nOptions:\n  -n <secs>       seconds to wait between updates\n  -t              turn off header\n\n -h         display this help and exit\n -v         output version information and exit\n\nThere are no more details yet.\n"
+}
+
+while getopts :vhtn: XTRA
+do
+	case ${XTRA} in
+		"v")
+			print 'watch in zsh 1.0.0'
+			exit 0
+			;;
+		"t")
+			TBAR=false
+			;;
+		"n")
+			TICKS=$((${OPTARG}))
+			[[ $TICKS -lt 1 ]] && print -u2 "Time must be greater than 0.\n" && exit 254
+			;;
+		':')
+			print -u2 -f "${0:t}: option requires an argument -- ${OPTARG}"
+			_help "$0"
+			exit 80
+			;&
+		'h')
+			_help "$0"
+			exit 0
+			;;
+		'?')
+			print -u2 "${0:t}: invalid option -- ${OPTARG}"
+			_help "$0"
+			exit 22
+			;;
+
+	esac
+done
+
+shift $((${OPTIND}-1))
+[[ ${#@} -lt 1 ]] && _help "${0}" && exit 666
+
+header_loop() {
+	TIKBIN="Every ${TICKS}.0s: ${@}"
+	HOSTIME="$(uname -n): $(date)"
+	printf "\e[30;47m%s %0$((${COLUMNS}-$((${#TIKBIN}+1))))s\e[0m\n" "${TIKBIN}" "${HOSTIME}"
+}
+
+clear
+$TBAR && header_loop "$@"
+$TBAR && ROSE=$((${LINES}-2)) || ROSE=$((${LINES}-1))
+"$@" | head -$((${ROSE})) | cut -c-${COLUMNS}
+ 
+while sleep ${TICKS}
+do
+	clear
+	$TBAR && header_loop "$@"
+	$TBAR && ROSE=$((${LINES}-2)) || ROSE=$((${LINES}-1))
+	"$@" | head -$((${ROSE})) | cut -c-${COLUMNS}
+done
