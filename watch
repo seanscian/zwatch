@@ -68,7 +68,6 @@ header_loop() {
 clear
 $TBAR && header_loop "$@"
 $TBAR && ROSE=$((${LINES}-2)) || ROSE=$((${LINES}-1))
-# "$@" | head -$((${ROSE})) | cut -c-${COLUMNS}
 "$@" | head -$((${ROSE})) | sed -e 's/	/     /g' | cut -c-${COLUMNS}
  
 while sleep ${TICKS}
