@@ -1,53 +1,66 @@
 function zwatch {
-	local TBAR TICKS ROSE
+	local TBAR TICKS ROSE RANCOR TIKBIN HOSTIME XTRA KEY
 	declare -F 1 TICKS=2
 	declare TBAR=true
+	declare RANCOR="head"
 
-	_help() {
+	_zwatch_help() {
 		print -u2 -f "\nUsage:\n ${1:t} [options] command\n\nOptions:\n  -n, --interval <secs>  seconds to wait between updates\n  -t, --no-title         turn off header\n\n -h, --help     display this help and exit\n -v, --version  output version information and exit\n\nThere are no more details yet.\n"
 	}
 
-	while getopts :vhtn:-: XTRA
+	trap _zwatch_cleanup EXIT
+
+	_zwatch_cleanup() {
+		unfunction _zwatch_help _zwatch_cleanup
+	}
+
+	while getopts :fvhtn:-: XTRA
 	do
 		case ${XTRA} in
+			"f")
+				RANCOR="tail"
+				;;
 			"v")
 				print 'watch in zsh 1.0.1'
-				exit 0
+				return 0
 				;;
 			"t")
 				TBAR=false
 				;;
 			"n")
-				! [[ ${OPTARG} == (|-)(<->(|.|.<->)|.<->) ]] && print -u2 "${0:t}: failed to parse argument: '${OPTARG}': Invalid argument" && exit 1
+				! [[ ${OPTARG} == (|-)(<->(|.|.<->)|.<->) ]] && print -u2 "${0:t}: failed to parse argument: '${OPTARG}': Invalid argument" && return 1
 				TICKS=$((${OPTARG}))
 				[[ $TICKS -le 0 ]] && TICKS=0.1
 				;;
 			':')
 				print -u2 -f "${0:t}: option requires an argument -- ${OPTARG}"
-				_help "$0"
-				exit 80
+				_zwatch_help "$0"
+				return 80
 				;;
 			'h')
-				_help "$0"
-				exit 0
+				_zwatch_help "$0"
+				return 0
 				;;
 			'?')
 				print -u2 "${0:t}: invalid option -- ${OPTARG}"
-				_help "$0"
-				exit 22
+				_zwatch_help "$0"
+				return 22
 				;;
 			'-')
 				case "${OPTARG}" in
+					"follow")
+						RANCOR="tail"
+						;;
 					"help")
-						_help "$0"
-						exit 0
+						_zwatch_help "$0"
+						return 0
 						;;
 					"version")
 						print 'watch in zsh 1.0.1'
-						exit 0
+						return 0
 						;;
 					"interval")
-						! [[ ${*[$OPTIND]} == (|-)(<->(|.|.<->)|.<->) ]] && print -u2 "${0:t}: failed to parse argument: '${*[$OPTIND]}': Invalid argument" && exit 1
+						! [[ ${*[$OPTIND]} == (|-)(<->(|.|.<->)|.<->) ]] && print -u2 "${0:t}: failed to parse argument: '${*[$OPTIND]}': Invalid argument" && return 1
 						TICKS=$((${*[$OPTIND]}))
 						[[ $TICKS -le 0 ]] && TICKS=0.1
 						OPTIND=$((OPTIND+1))
@@ -57,30 +70,26 @@ function zwatch {
 						;;
 					*)
 						print -u2 "${0:t}: unrecognized option \`--${OPTARG}'"
-						_help "$0"
-						exit 1
+						_zwatch_help "$0"
+						return 1
 						;;
 				esac
 		esac
 	done
 
 	shift $((${OPTIND}-1))
-	[[ ${#@} -lt 1 ]] && _help "${0}" && exit 666
+	[[ ${#@} -lt 1 ]] && _zwatch_help "${0}" && return 666
 
-	header_loop() {
-		TIKBIN="Every ${TICKS}s: ${@}"
-		HOSTIME="$(uname -n): $(date)"
-		printf "\e[30;47m%s %0$((${COLUMNS}-$((${#TIKBIN}+1))))s\e[0m\n" "${TIKBIN}" "${HOSTIME}"
-	}
-
+	TIKBIN="Every ${TICKS}s: ${@}"
 	$TBAR && ROSE=$((${LINES}-2)) || ROSE=$((${LINES}-1))
 
 	while () {
 			clear
-			$TBAR && header_loop "${@:2}"
+			HOSTIME="$(uname -n): $(date)"
+			$TBAR && printf "\e[30;47m%s %0$((${COLUMNS}-$((${#TIKBIN}+1))))s\e[0m\n" "${TIKBIN}" "${HOSTIME}"
 			$TBAR && ROSE=$((${LINES}-2)) || ROSE=$((${LINES}-1))
 			cat -- "${1}"
-		} =("$@" | head -$((${ROSE})) | sed -e 's/	/     /g' | cut -c-${COLUMNS}) "$@"
+		} =("$@" 2>&1 | ${RANCOR} -$((${ROSE})) | sed -e 's/	/     /g' | cut -c-${COLUMNS}) "$@"
 	do
 		if read -s -k 1 -t ${TICKS} KEY
 		then
