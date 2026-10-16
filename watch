@@ -35,7 +35,10 @@ function zwatch {
 
 	_zwatch_cleanup() {
 		unfunction _zwatch_help _zwatch_cleanup
+		printf '\033[?25h'
 	}
+
+	printf '\033[?25l'
 
 	while getopts :fvhtn:-: XTRA
 	do
@@ -115,13 +118,14 @@ function zwatch {
 
 		# Do the magic!
 	while () {
-			clear
+			printf '\033[1;1H'
 				# Build the title bar
 			$TBAR && { HOSTIME="$(uname -n): $(date)"
 				printf "\e[30;47m%s %0$((${COLUMNS}-$((${#TIKBIN}+1))))s\e[0m\n" "${TIKBIN}" "${HOSTIME}"
 				ROSE=$((${LINES}-2))
 			} || ROSE=$((${LINES}-1))
-			cat -- "${1}"
+			awk '{print $0 "\033[K"}' "${1}"
+			printf '\033[J'
 		} =("$@" 2>&1 | ${RANCOR} -$((${ROSE})) | sed -e 's/	/     /g' | cut -c-${COLUMNS})
 	do
 			# This looks wrong, but it needs to be this granular for the INT trap.
