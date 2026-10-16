@@ -1,14 +1,37 @@
 function zwatch {
-	local TBAR TICKS ROSE RANCOR TIKBIN HOSTIME XTRA KEY
+	local TBAR TICKS ROSE RANCOR TIKBIN HOSTIME XTRA KEY clock VERSION OPTARG
+		# Establish defaults based on behavior observed in watch from procps-ng
+		# 4.0.7: 2s default, title bar, and read the top of the command output.
+	declare -r VERSION='1.1.0'
 	declare -F 1 TICKS=2
 	declare TBAR=true
 	declare RANCOR="head"
 
+		# The help function. Adding Options as I develop them. Note: Some of
+		# the options claim behavior I did not observe in procps-ng watch. I
+		# have repeated the Options verbatim for familiar visual scanning.
 	_zwatch_help() {
-		print -u2 -f "\nUsage:\n ${1:t} [options] command\n\nOptions:\n  -n, --interval <secs>  seconds to wait between updates\n  -t, --no-title         turn off header\n\n -h, --help     display this help and exit\n -v, --version  output version information and exit\n\nThere are no more details yet.\n"
-	}
+		cat <<-ZWATCHHELP >&2
 
+			Usage:
+			 ${1:t} [options] command
+
+			Options:
+			  -f, --follow           Follow the output and don't clear screen
+			  -n, --interval <secs>  seconds to wait between updates
+			  -t, --no-title         turn off header
+
+			 -h, --help     display this help and exit
+			 -v, --version  output version information and exit
+
+			There are no more details yet.
+		ZWATCHHELP
+		}
+
+		# As a function, I want to ensure cleanup of help and cleanup functions.
+	setopt localoptions localtraps
 	trap _zwatch_cleanup EXIT
+	trap 'return 130' INT
 
 	_zwatch_cleanup() {
 		unfunction _zwatch_help _zwatch_cleanup
@@ -18,16 +41,18 @@ function zwatch {
 	do
 		case ${XTRA} in
 			"f")
+					# -f "flips the script" and shows the end of the command output.
 				RANCOR="tail"
 				;;
 			"v")
-				print 'watch in zsh 1.0.1'
+				printf 'zwatch %s\n' ${VERSION}
 				return 0
 				;;
 			"t")
 				TBAR=false
 				;;
 			"n")
+					# Attempt to handle all cases of numeric input, lowest value 0.1
 				! [[ ${OPTARG} == (|-)(<->(|.|.<->)|.<->) ]] && print -u2 "${0:t}: failed to parse argument: '${OPTARG}': Invalid argument" && return 1
 				TICKS=$((${OPTARG}))
 				[[ $TICKS -le 0 ]] && TICKS=0.1
@@ -47,8 +72,10 @@ function zwatch {
 				return 22
 				;;
 			'-')
+					# The cheap way of implementing long options
 				case "${OPTARG}" in
 					"follow")
+							# --follow "flips the script" and shows the end of the command output.
 						RANCOR="tail"
 						;;
 					"help")
@@ -56,10 +83,11 @@ function zwatch {
 						return 0
 						;;
 					"version")
-						print 'watch in zsh 1.0.1'
+						printf 'zwatch %s\n' ${VERSION}
 						return 0
 						;;
 					"interval")
+							# Same as above: attempt to handle all kinds of numbers, lowest value 0.1s.
 						! [[ ${*[$OPTIND]} == (|-)(<->(|.|.<->)|.<->) ]] && print -u2 "${0:t}: failed to parse argument: '${*[$OPTIND]}': Invalid argument" && return 1
 						TICKS=$((${*[$OPTIND]}))
 						[[ $TICKS -le 0 ]] && TICKS=0.1
@@ -77,23 +105,33 @@ function zwatch {
 		esac
 	done
 
+		# sweep away the options. If there’s no command to run, complain.
 	shift $((${OPTIND}-1))
 	[[ ${#@} -lt 1 ]] && _zwatch_help "${0}" && return 666
 
+		# Build static portion of title bar and initial value for screen.
 	TIKBIN="Every ${TICKS}s: ${@}"
 	$TBAR && ROSE=$((${LINES}-2)) || ROSE=$((${LINES}-1))
 
+		# Do the magic!
 	while () {
 			clear
-			HOSTIME="$(uname -n): $(date)"
-			$TBAR && printf "\e[30;47m%s %0$((${COLUMNS}-$((${#TIKBIN}+1))))s\e[0m\n" "${TIKBIN}" "${HOSTIME}"
-			$TBAR && ROSE=$((${LINES}-2)) || ROSE=$((${LINES}-1))
+				# Build the title bar
+			$TBAR && { HOSTIME="$(uname -n): $(date)"
+				printf "\e[30;47m%s %0$((${COLUMNS}-$((${#TIKBIN}+1))))s\e[0m\n" "${TIKBIN}" "${HOSTIME}"
+				ROSE=$((${LINES}-2))
+			} || ROSE=$((${LINES}-1))
 			cat -- "${1}"
-		} =("$@" 2>&1 | ${RANCOR} -$((${ROSE})) | sed -e 's/	/     /g' | cut -c-${COLUMNS}) "$@"
+		} =("$@" 2>&1 | ${RANCOR} -$((${ROSE})) | sed -e 's/	/     /g' | cut -c-${COLUMNS})
 	do
-		if read -s -k 1 -t ${TICKS} KEY
-		then
-			[[ $KEY == q ]] && break
-		fi
+			# This looks wrong, but it needs to be this granular for the INT trap.
+		for ((clock=0;clock<$((${TICKS}*10));clock++))
+		do
+				# wait for 0.1s for a single keypress, and exit if it’s a “q”
+			if read -s -k 1 -t 0.1 KEY
+			then
+				[[ $KEY == q ]] && break 2
+			fi
+		done
 	done
 }
