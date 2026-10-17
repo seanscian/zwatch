@@ -2,7 +2,7 @@ function zwatch {
 	local TBAR TICKS ROSE RANCOR HOSTIME XTRA KEY clock VERSION OPTARG TIK
 		# Establish defaults based on behavior observed in watch from procps-ng
 		# 4.0.7: 2s default, title bar, and read the top of the command output.
-	declare -r VERSION='1.1.0'
+	declare -r VERSION='1.1.5'
 	declare -F 1 TICKS=2
 	declare TBAR=true
 	declare RANCOR="head"
@@ -117,7 +117,7 @@ function zwatch {
 
 		# Build static portion of title bar and initial value for screen.
 	TIK="Every ${TICKS}s: "
-	$TBAR && ROSE=$((${LINES}-2)) || ROSE=$((${LINES}-1))
+	$TBAR && ROSE=$((${LINES}-1)) || ROSE=${LINES}
 
 		# Do the magic!
 	while () {
@@ -129,11 +129,10 @@ function zwatch {
 				local COMMND="${FULLCMD}"
 				[[ ${#COMMND} -gt ${REMAIN} ]] && COMMND="${COMMND::$REMAIN}…" || COMMND="${COMMND}${(l:$((${REMAIN}-${#COMMND}+1)):: :)}"
 				printf "\e[30;47m%s%s  %s\e[0m\033[2;1H" "${TIK}" "${COMMND}" "${HOSTIME}"
-				ROSE=$((${LINES}-2))
-			} || ROSE=$((${LINES}-1))
-			awk '{print $0 "\033[K"}' "${1}"
-			printf '\033[J'
-		} =("$@" 2>&1 | ${RANCOR} -$((${ROSE})) | sed -e 's/	/     /g' | cut -c-${COLUMNS})
+				ROSE=$((${LINES}-1))
+			} || ROSE=${LINES}
+			awk -v lines="${LINES}" -v title="${TBAR}" -v cols="${COLUMNS}" 'NR>1 {printf "\n"} {printf "%s%s", $0, (length($0) < cols ? "\033[K" : "")} END { nextrow = NR + (title == "true" ? 2 : 1); if (nextrow <= lines) printf "\033[%d;1H\033[J", nextrow}' "${1}"
+		} =("$@" 2>&1 | sed -e 's/	/     /g' | fold -w ${COLUMNS} | ${RANCOR} -${ROSE})
 	do
 			# This looks wrong, but it needs to be this granular for the INT trap.
 		for ((clock=0;clock<$((${TICKS}*10));clock++))
