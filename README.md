@@ -7,7 +7,7 @@ I didn’t like how `watch` builds on macOS couldn’t handle unicode/UTF-8, how
 
 Could I have hacked on the watch binary? Yeah.
 
-Will I add `zcurses` and expand it? Of course.
+Will I add `zcurses`? After that last commit, that’s next.
 
 Will I create a `man` page? You bet.
 
