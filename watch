@@ -1,15 +1,16 @@
 function zwatch {
 	local TBAR TICKS ROSE RANCOR HOSTIME XTRA KEY clock VERSION OPTARG TIK
-		# Establish defaults based on behavior observed in watch from procps-ng
-		# 4.0.7: 2s default, title bar, and read the top of the command output.
+		# Establish defaults based on behavior observed in watch from procps-
+		# ng 4.0.7: 2s default, title bar, and read the top of the command
+		# output.
 	declare -r VERSION='1.1.5'
 	declare -F 1 TICKS=2
 	declare TBAR=true
 	declare RANCOR="head"
 
-		# The help function. Adding Options as I develop them. Note: Some of
-		# the options claim behavior I did not observe in procps-ng watch. I
-		# have repeated the Options verbatim for familiar visual scanning.
+		# The help function. Adding Options as I develop them. Note: Some of the
+		# options claim behavior I did not observe in procps-ng watch. I have
+		# repeated the Options verbatim for familiar visual scanning.
 	_zwatch_help() {
 		cat <<-ZWATCHHELP >&2
 
@@ -31,7 +32,7 @@ function zwatch {
 		# As a function, I want to ensure cleanup of help and cleanup functions.
 	setopt localoptions localtraps
 	trap _zwatch_cleanup EXIT
-	trap 'return 130' INT
+	trap 'printf "\n"; return 130' INT
 
 	_zwatch_cleanup() {
 		unfunction _zwatch_help _zwatch_cleanup
@@ -76,7 +77,8 @@ function zwatch {
 					# The cheap way of implementing long options
 				case "${OPTARG}" in
 					"follow")
-							# --follow "flips the script" and shows the end of the command output.
+							# --follow "flips the script" and shows the end of the command
+							# output.
 						RANCOR="tail"
 						;;
 					"help")
@@ -88,7 +90,8 @@ function zwatch {
 						return 0
 						;;
 					"interval")
-							# Same as above: attempt to handle all kinds of numbers, lowest value 0.1s.
+							# Same as above: attempt to handle all kinds of numbers,
+							# lowest value 0.1s.
 						! [[ ${*[$OPTIND]} == (|-)(<->(|.|.<->)|.<->) ]] && print -u2 "${0:t}: failed to parse argument: '${*[$OPTIND]}': Invalid argument" && return 1
 						TICKS=$((${*[$OPTIND]}))
 						[[ $TICKS -le 0 ]] && TICKS=0.1
@@ -119,7 +122,8 @@ function zwatch {
 	TIK="Every ${TICKS}s: "
 	$TBAR && ROSE=$((${LINES}-1)) || ROSE=${LINES}
 
-		# Do the magic!
+		# Do the magic! Remember: The anonymous function ensures the title bar
+		# refreshes only after the next frame has been collected by =(…).
 	while () {
 			printf '\033[1;1H'
 				# Build the title bar
@@ -140,7 +144,7 @@ function zwatch {
 				# wait for 0.1s for a single keypress, and exit if it’s a “q”
 			if read -s -k 1 -t 0.1 KEY
 			then
-				[[ $KEY == q ]] && break 2
+				[[ $KEY == q ]] && printf '\n' && break 2
 			fi
 		done
 	done
