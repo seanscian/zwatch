@@ -1,5 +1,5 @@
 function zwatch {
-	local TBAR TICKS ROSE RANCOR TIKBIN HOSTIME XTRA KEY clock VERSION OPTARG
+	local TBAR TICKS ROSE RANCOR HOSTIME XTRA KEY clock VERSION OPTARG TIK
 		# Establish defaults based on behavior observed in watch from procps-ng
 		# 4.0.7: 2s default, title bar, and read the top of the command output.
 	declare -r VERSION='1.1.0'
@@ -37,8 +37,6 @@ function zwatch {
 		unfunction _zwatch_help _zwatch_cleanup
 		printf '\033[?25h'
 	}
-
-	printf '\033[?25l'
 
 	while getopts :fvhtn:-: XTRA
 	do
@@ -110,18 +108,27 @@ function zwatch {
 
 		# sweep away the options. If there’s no command to run, complain.
 	shift $((${OPTIND}-1))
-	[[ ${#@} -lt 1 ]] && _zwatch_help "${0}" && return 666
+	local FULLCMD="$*"
+
+	[[ -z ${FULLCMD} ]] && _zwatch_help "${0}" && return 666
+
+		# Hide the cursor… this matters.
+	printf '\033[?25l'
 
 		# Build static portion of title bar and initial value for screen.
-	TIKBIN="Every ${TICKS}s: ${@}"
+	TIK="Every ${TICKS}s: "
 	$TBAR && ROSE=$((${LINES}-2)) || ROSE=$((${LINES}-1))
 
 		# Do the magic!
 	while () {
 			printf '\033[1;1H'
 				# Build the title bar
-			$TBAR && { HOSTIME="$(uname -n): $(date)"
-				printf "\e[30;47m%s %0$((${COLUMNS}-$((${#TIKBIN}+1))))s\e[0m\n" "${TIKBIN}" "${HOSTIME}"
+			$TBAR && {
+				HOSTIME="$(uname -n): $(date)"
+				local REMAIN=$((${COLUMNS}-(${#HOSTIME}+${#TIK}+3)))
+				local COMMND="${FULLCMD}"
+				[[ ${#COMMND} -gt ${REMAIN} ]] && COMMND="${COMMND::$REMAIN}…" || COMMND="${COMMND}${(l:$((${REMAIN}-${#COMMND}+1)):: :)}"
+				printf "\e[30;47m%s%s  %s\e[0m\033[2;1H" "${TIK}" "${COMMND}" "${HOSTIME}"
 				ROSE=$((${LINES}-2))
 			} || ROSE=$((${LINES}-1))
 			awk '{print $0 "\033[K"}' "${1}"
