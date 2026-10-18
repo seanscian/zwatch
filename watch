@@ -125,18 +125,28 @@ function zwatch {
 		# Do the magic! Remember: The anonymous function ensures the title bar
 		# refreshes only after the next frame has been collected by =(…).
 	while () {
-			printf '\033[1;1H'
-				# Build the title bar
-			$TBAR && {
-				HOSTIME="$(uname -n): $(date)"
-				local REMAIN=$((${COLUMNS}-(${#HOSTIME}+${#TIK}+3)))
-				local COMMND="${FULLCMD}"
-				[[ ${#COMMND} -gt ${REMAIN} ]] && COMMND="${COMMND::$REMAIN}…" || COMMND="${COMMND}${(l:$((${REMAIN}-${#COMMND}+1)):: :)}"
-				printf "\e[30;47m%s%s  %s\e[0m\033[2;1H" "${TIK}" "${COMMND}" "${HOSTIME}"
-				ROSE=$((${LINES}-1))
-			} || ROSE=${LINES}
-			awk -v lines="${LINES}" -v title="${TBAR}" -v cols="${COLUMNS}" 'NR>1 {printf "\n"} {printf "%s%s", $0, (length($0) < cols ? "\033[K" : "")} END { nextrow = NR + (title == "true" ? 2 : 1); if (nextrow <= lines) printf "\033[%d;1H\033[J", nextrow}' "${1}"
-		} =("$@" 2>&1 | sed -e 's/	/     /g' | fold -w ${COLUMNS} | ${RANCOR} -${ROSE})
+		printf '\033[1;1H'
+			# Build the title bar
+		$TBAR && {
+			HOSTIME="$(uname -n): $(date)"
+			local REMAIN=$((${COLUMNS}-(${#HOSTIME}+${#TIK}+3)))
+			local COMMND="${FULLCMD}"
+			[[ ${#COMMND} -gt ${REMAIN} ]] &&
+				COMMND="${COMMND::$REMAIN}…" ||
+				COMMND="${COMMND}${(l:$((${REMAIN}-${#COMMND}+1)):: :)}"
+			printf "\033[30;47m%s%s  %s\033[0m\033[2;1H" "${TIK}" "${COMMND}" "${HOSTIME}"
+			ROSE=$((${LINES}-1))
+		} || ROSE=${LINES}
+		awk -v lines="${LINES}" -v title="${TBAR}" -v cols="${COLUMNS}" 'NR>1 {printf "\n"} {printf "%s%s", $0, (length($0) < cols ? "\033[K" : "")} END { nextrow = NR + (title == "true" ? 2 : 1); if (nextrow <= lines) printf "\033[%d;1H\033[J", nextrow}' "${1}"
+	} =(
+		"$@" 2>&1 |
+				# Zsh interprets the octal escape and passes it to sed. This could
+				# be a bare tab, but I want this human-readable and able to copy-
+				# paste.
+			sed -e $'s/\011/     /g' |
+			fold -w ${COLUMNS} |
+			${RANCOR} -${ROSE}
+		)
 	do
 			# This looks wrong, but it needs to be this granular for the INT trap.
 		for ((clock=0;clock<$((${TICKS}*10));clock++))
