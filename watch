@@ -1,3 +1,7 @@
+	# I try to standardize on octal representations of things like tab or
+	# escape, because I want this human-readable and survive copy-paste.
+	# This is why zsh’s $'…' quoting is present, like $'s/\011/     /g'.
+
 function zwatch {
 	local TBAR TICKS ROSE RANCOR HOSTIME XTRA KEY clock VERSION OPTARG TIK
 		# Establish defaults based on behavior observed in watch from procps-
@@ -43,7 +47,7 @@ function zwatch {
 	do
 		case ${XTRA} in
 			"f")
-					# -f "flips the script" and shows the end of the command output.
+					# -f “flips the script” and shows the end of the command output.
 				RANCOR="tail"
 				;;
 			"v")
@@ -77,7 +81,7 @@ function zwatch {
 					# The cheap way of implementing long options
 				case "${OPTARG}" in
 					"follow")
-							# --follow "flips the script" and shows the end of the command
+							# --follow “flips the script” and shows the end of the command
 							# output.
 						RANCOR="tail"
 						;;
@@ -109,7 +113,7 @@ function zwatch {
 		esac
 	done
 
-		# sweep away the options. If there’s no command to run, complain.
+		# Sweep away the options. If there’s no command to run, complain.
 	shift $((${OPTIND}-1))
 	local FULLCMD="$*"
 
@@ -140,9 +144,6 @@ function zwatch {
 		awk -v lines="${LINES}" -v title="${TBAR}" -v cols="${COLUMNS}" 'NR>1 {printf "\n"} {printf "%s%s", $0, (length($0) < cols ? "\033[K" : "")} END { nextrow = NR + (title == "true" ? 2 : 1); if (nextrow <= lines) printf "\033[%d;1H\033[J", nextrow}' "${1}"
 	} =(
 		"$@" 2>&1 |
-				# Zsh interprets the octal escape and passes it to sed. This could
-				# be a bare tab, but I want this human-readable and able to copy-
-				# paste.
 			sed -e $'s/\011/     /g' |
 			fold -w ${COLUMNS} |
 			${RANCOR} -${ROSE}
