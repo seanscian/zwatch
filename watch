@@ -144,9 +144,9 @@ function zwatch {
 			local REMAIN=$((${COLUMNS}-(${#HOSTIME}+${#TIK}+2)))
 			[[ ${REMAIN} -lt 1 ]] && REMAIN=1
 			[[ ${#FULLCMD} -gt ${REMAIN} ]] &&
-				COMMND="${FULLCMD::$(($REMAIN-1))}… " ||
-				COMMND="${FULLCMD}${(l:$((${REMAIN}-${#FULLCMD}+1)):: :)}"
-			printf "\033[30;47m%s%s %s\033[0m\033[2;1H" "${TIK}" "${COMMND}" "${HOSTIME}"
+				COMMND="${FULLCMD::$(($REMAIN-1))}…" ||
+				COMMND="${FULLCMD}${(l:$((${REMAIN}-${#FULLCMD})):: :)}"
+			printf "\033[30;47m%s%s  %s\033[0m\033[2;1H" "${TIK}" "${COMMND}" "${HOSTIME}"
 			ROSE=$((${LINES}-1))
 		} || ROSE=${LINES}
 		awk -v lines="${LINES}" -v title="${TBAR}" -v cols="${COLUMNS}" 'NR>1 {printf "\n"} {printf "%s%s", $0, (length($0) < cols ? "\033[K" : "")} END { nextrow = NR + (title == "true" ? 2 : 1); if (nextrow <= lines) printf "\033[%d;1H\033[J", nextrow}' "${1}"
