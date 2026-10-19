@@ -3,15 +3,15 @@
 	# This is why zsh’s $'…' quoting is present, like $'s/\011/     /g'.
 
 function zwatch {
-	local TBAR TICKS ROSE RANCOR HOSTIME XTRA KEY clock VERSION OPTARG TIK CLIPPER
+	local TBAR TICKS ROSE RANCOR HOSTIME XTRA KEY clock VERSION OPTARG TIK CLIPPER COMMND
 		# Establish defaults based on behavior observed in watch from procps-
 		# ng 4.0.7: 2s default, title bar, and read the top of the command
 		# output.
-	declare -r VERSION='1.2.0'
+	declare -r VERSION='1.2.5'
 	declare -F 1 TICKS=2
 	declare TBAR=true
 	declare RANCOR="head"
-	declare CLIPPER='fold -w '
+	declare CLIPPER='fold -w'
 
 		# The help function. Adding Options as I develop them. Note: Some of the
 		# options claim behavior I did not observe in procps-ng watch. I have
@@ -23,10 +23,10 @@ function zwatch {
 			 ${1:t} [options] command
 
 			Options:
-			  -f, --follow           Follow the output and don't clear screen
+			  -f, --follow           Follow the output and don’t clear screen
 			  -n, --interval <secs>  seconds to wait between updates
 			  -t, --no-title         turn off header
-			  -w, --no-wrap          turn off line wrapping
+			  -w, --no-wrap          turn off line wrapping (press ‘w’ to toggle)
 
 			 -h, --help     display this help and exit
 			 -v, --version  output version information and exit
@@ -64,7 +64,7 @@ function zwatch {
 				;;
 			"n")
 					# Attempt to handle all cases of numeric input, lowest value 0.1
-				! [[ ${OPTARG} == (|-)(<->(|.|.<->)|.<->) ]] && print -u2 "${0:t}: failed to parse argument: '${OPTARG}': Invalid argument" && return 1
+				! [[ ${OPTARG} == (|-)(<->(|.|.<->)|.<->) ]] && print -u2 "${0:t}: failed to parse argument: ‘${OPTARG}’: Invalid argument" && return 1
 				TICKS=$((${OPTARG}))
 				[[ $TICKS -le 0 ]] && TICKS=0.1
 				;;
@@ -104,7 +104,7 @@ function zwatch {
 					"interval")
 							# Same as above: attempt to handle all kinds of numbers,
 							# lowest value 0.1s.
-						! [[ ${*[$OPTIND]} == (|-)(<->(|.|.<->)|.<->) ]] && print -u2 "${0:t}: failed to parse argument: '${*[$OPTIND]}': Invalid argument" && return 1
+						! [[ ${*[$OPTIND]} == (|-)(<->(|.|.<->)|.<->) ]] && print -u2 "${0:t}: failed to parse argument: ‘${*[$OPTIND]}’: Invalid argument" && return 1
 						TICKS=$((${*[$OPTIND]}))
 						[[ $TICKS -le 0 ]] && TICKS=0.1
 						OPTIND=$((OPTIND+1))
@@ -113,7 +113,7 @@ function zwatch {
 						TBAR=false
 						;;
 					*)
-						print -u2 "${0:t}: unrecognized option \`--${OPTARG}'"
+						print -u2 "${0:t}: unrecognized option ‘--${OPTARG}’"
 						_zwatch_help "$0"
 						return 1
 						;;
@@ -141,13 +141,12 @@ function zwatch {
 			# Build the title bar
 		$TBAR && {
 			HOSTIME="$(uname -n): $(date)"
-			local REMAIN=$((${COLUMNS}-(${#HOSTIME}+${#TIK}+3)))
-			[[ ${REMAIN} -lt 0 ]]  && REMAIN=0
-			local COMMND="${FULLCMD}"
-			[[ ${#COMMND} -gt ${REMAIN} ]] &&
-				COMMND="${COMMND::$REMAIN}…" ||
-				COMMND="${COMMND}${(l:$((${REMAIN}-${#COMMND}+1)):: :)}"
-			printf "\033[30;47m%s%s  %s\033[0m\033[2;1H" "${TIK}" "${COMMND}" "${HOSTIME}"
+			local REMAIN=$((${COLUMNS}-(${#HOSTIME}+${#TIK}+2)))
+			[[ ${REMAIN} -lt 1 ]] && REMAIN=1
+			[[ ${#FULLCMD} -gt ${REMAIN} ]] &&
+				COMMND="${FULLCMD::$(($REMAIN-1))}… " ||
+				COMMND="${FULLCMD}${(l:$((${REMAIN}-${#FULLCMD}+1)):: :)}"
+			printf "\033[30;47m%s%s %s\033[0m\033[2;1H" "${TIK}" "${COMMND}" "${HOSTIME}"
 			ROSE=$((${LINES}-1))
 		} || ROSE=${LINES}
 		awk -v lines="${LINES}" -v title="${TBAR}" -v cols="${COLUMNS}" 'NR>1 {printf "\n"} {printf "%s%s", $0, (length($0) < cols ? "\033[K" : "")} END { nextrow = NR + (title == "true" ? 2 : 1); if (nextrow <= lines) printf "\033[%d;1H\033[J", nextrow}' "${1}"
@@ -158,13 +157,30 @@ function zwatch {
 			${RANCOR} -${ROSE}
 		)
 	do
-			# This looks wrong, but it needs to be this granular for the INT trap.
+			# This looks wrong, but it needed to be this granular for the INT trap.
 		for ((clock=0;clock<$((${TICKS}*10));clock++))
 		do
-				# wait for 0.1s for a single keypress, and exit if it’s a “q”
+				# wait for 0.1s for a single keypress…
 			if read -s -k 1 -t 0.1 KEY
 			then
-				[[ $KEY == q ]] && printf '\n' && break 2
+				case ${KEY} in
+						# … and exit if it’s a “q”
+					"q")
+						printf '\n'
+						break 2
+						;;
+						# … and since we’re doing keystrokes now, toggle clipping
+					"w")
+						case "${CLIPPER}" in
+							'cut -c-')
+								CLIPPER='fold -w'
+								;;
+							'fold -w')
+								CLIPPER='cut -c-'
+								;;
+						esac
+						;;
+				esac
 			fi
 		done
 	done
