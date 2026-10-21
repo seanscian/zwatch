@@ -7,7 +7,7 @@ function zwatch {
 		# Establish defaults based on behavior observed in watch from procps-
 		# ng 4.0.7: 2s default, title bar, and read the top of the command
 		# output.
-	declare -r VERSION='1.2.5'
+	declare -r VERSION='1.3.0'
 	declare -F 1 TICKS=2
 	declare TBAR=true
 	declare RANCOR="head"
@@ -134,54 +134,55 @@ function zwatch {
 	TIK="Every ${TICKS}s: "
 	$TBAR && ROSE=$((${LINES}-1)) || ROSE=${LINES}
 
-		# Do the magic! Remember: The anonymous function ensures the title bar
-		# refreshes only after the next frame has been collected by =(…).
-	while () {
+		# Do the magic!
+	while
+		HOSTIME="$(uname -n): $(date)"
 		printf '\033[1;1H'
-			# Build the title bar
-		$TBAR && {
-			HOSTIME="$(uname -n): $(date)"
-			local REMAIN=$((${COLUMNS}-(${#HOSTIME}+${#TIK}+2)))
-			[[ ${REMAIN} -lt 1 ]] && REMAIN=1
-			[[ ${#FULLCMD} -gt ${REMAIN} ]] &&
-				COMMND="${FULLCMD::$(($REMAIN-1))}…" ||
-				COMMND="${FULLCMD}${(l:$((${REMAIN}-${#FULLCMD})):: :)}"
-			printf "\033[30;47m%s%s  %s\033[0m\033[2;1H" "${TIK}" "${COMMND}" "${HOSTIME}"
-			ROSE=$((${LINES}-1))
-		} || ROSE=${LINES}
-		awk -v lines="${LINES}" -v title="${TBAR}" -v cols="${COLUMNS}" 'NR>1 {printf "\n"} {printf "%s%s", $0, (length($0) < cols ? "\033[K" : "")} END { nextrow = NR + (title == "true" ? 2 : 1); if (nextrow <= lines) printf "\033[%d;1H\033[J", nextrow}' "${1}"
-	} =(
-		"$@" 2>&1 |
-			sed -e $'s/\011/     /g' |
-			${=CLIPPER}${COLUMNS} |
-			${RANCOR} -${ROSE}
-		)
 	do
-			# This looks wrong, but it needed to be this granular for the INT trap.
-		for ((clock=0;clock<$((${TICKS}*10));clock++))
-		do
-				# wait for 0.1s for a single keypress…
-			if read -s -k 1 -t 0.1 KEY
-			then
-				case ${KEY} in
-						# … and exit if it’s a “q”
-					"q")
-						printf '\n'
-						break 2
-						;;
-						# … and since we’re doing keystrokes now, toggle clipping
-					"w")
-						case "${CLIPPER}" in
-							'cut -c-')
-								CLIPPER='fold -w'
-								;;
-							'fold -w')
-								CLIPPER='cut -c-'
-								;;
-						esac
-						;;
-				esac
-			fi
-		done
+		() {
+				# This looks wrong, but it needed to be this granular for the INT
+				# trap, then I just decided to use it for other things.
+			for ((clock=0;clock<$((${TICKS}*10));clock++))
+			do
+					# Build the title bar
+				$TBAR && {
+					local REMAIN=$((${COLUMNS}-(${#HOSTIME}+${#TIK}+2)))
+					[[ ${REMAIN} -lt 1 ]] && REMAIN=1
+					[[ ${#FULLCMD} -gt ${REMAIN} ]] &&
+						COMMND="${FULLCMD::$(($REMAIN-1))}…" ||
+						COMMND="${FULLCMD}${(l:$((${REMAIN}-${#FULLCMD})):: :)}"
+					printf '\033[1;1H\033[30;47m%s%s  %s\033[0m' "${TIK}" "${COMMND}" "${HOSTIME}"
+					ROSE=$((${LINES}-1))
+				} || ROSE=${LINES}
+				$TBAR && printf '\033[2;1H' || printf '\033[1;1H'
+				sed -e $'s/\011/     /g' "${1}" |
+				${=CLIPPER}${COLUMNS} |
+				${RANCOR} -${ROSE} |
+				awk -v lines="${LINES}" -v title="${TBAR}" -v cols="${COLUMNS}" 'NR>1 {printf "\n"} {printf "%s%s", $0, (length($0) < cols ? "\033[K" : "")} END { nextrow = NR + (title == "true" ? 2 : 1); if (nextrow <= lines) printf "\033[%d;1H\033[J", nextrow}'
+
+					# wait for 0.1s for a single keypress…
+				if read -s -k 1 -t 0.1 KEY
+				then
+					case ${KEY} in
+							# … and exit if it’s a “q”
+						"q")
+							printf '\n'
+							break 2
+							;;
+							# … and since we’re doing keystrokes now, toggle clipping
+						"w")
+							case "${CLIPPER}" in
+								'cut -c-')
+									CLIPPER='fold -w'
+									;;
+								'fold -w')
+									CLIPPER='cut -c-'
+									;;
+							esac
+							;;
+					esac
+				fi
+			done
+		} =( "$@" 2>&1 )
 	done
 }
