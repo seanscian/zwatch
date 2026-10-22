@@ -7,7 +7,7 @@ function zwatch {
 		# Establish defaults based on behavior observed in watch from procps-
 		# ng 4.0.7: 2s default, title bar, and read the top of the command
 		# output.
-	declare -r VERSION='1.3.0'
+	declare -r VERSION='2.0.0'
 	declare -F 1 TICKS=2
 	declare TBAR=true
 	declare RANCOR="head"
