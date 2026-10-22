@@ -25,11 +25,16 @@ function zwatch {
 			Options:
 			  -f, --follow           Follow the output and don’t clear screen
 			  -n, --interval <secs>  seconds to wait between updates
-			  -t, --no-title         turn off header (press ‘t’ to toggle)
-			  -w, --no-wrap          turn off line wrapping (press ‘w’ to toggle)
+			  -t, --no-title         turn off header
+			  -w, --no-wrap          turn off line wrapping
 
 			 -h, --help     display this help and exit
 			 -v, --version  output version information and exit
+
+			Some Options can be toggled while ${1:t} is running:
+			  ‘n’ resets interval to 2.0s; + and - to increase/decrease by 1s
+			  ‘t’ toggles header
+			  ‘w’ toggles line wrapping
 
 			There are no more details yet.
 		ZWATCHHELP
@@ -170,7 +175,7 @@ function zwatch {
 							break 2
 							;;
 							# … and since we’re doing keystrokes now, toggles are possible
-						"+") (( TICKS+=1 )) ;;
+						"+") (( TICKS += 1 )) ;;
 						"-") (( TICKS = TICKS > 1 ? TICKS-1 : 0.1 )) ;;
 						"n") (( TICKS = 2 )) ;;
 						"t")
