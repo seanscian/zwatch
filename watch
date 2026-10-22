@@ -131,7 +131,6 @@ function zwatch {
 	printf '\033[?25l'
 
 		# Build static portion of title bar and initial value for screen.
-	TIK="Every ${TICKS}s: "
 	$TBAR && ROSE=$((${LINES}-1)) || ROSE=${LINES}
 
 		# Do the magic!
@@ -146,6 +145,7 @@ function zwatch {
 			do
 					# Build the title bar
 				$TBAR && {
+					TIK="Every ${TICKS}s: "
 					local REMAIN=$((${COLUMNS}-(${(m)#HOSTIME}+${(m)#TIK}+2)))
 					[[ ${REMAIN} -lt 1 ]] && REMAIN=1
 					[[ ${(m)#FULLCMD} -gt ${REMAIN} ]] &&
@@ -170,6 +170,9 @@ function zwatch {
 							break 2
 							;;
 							# … and since we’re doing keystrokes now, toggles are possible
+						"+") (( TICKS+=1 )) ;;
+						"-") (( TICKS = TICKS > 1 ? TICKS-1 : 0.1 )) ;;
+						"n") (( TICKS = 2 )) ;;
 						"t")
 							case ${TBAR} in
 								true) TBAR=false ;;
