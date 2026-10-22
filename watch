@@ -25,7 +25,7 @@ function zwatch {
 			Options:
 			  -f, --follow           Follow the output and don’t clear screen
 			  -n, --interval <secs>  seconds to wait between updates
-			  -t, --no-title         turn off header
+			  -t, --no-title         turn off header (press ‘t’ to toggle)
 			  -w, --no-wrap          turn off line wrapping (press ‘w’ to toggle)
 
 			 -h, --help     display this help and exit
@@ -169,7 +169,13 @@ function zwatch {
 							printf '\n'
 							break 2
 							;;
-							# … and since we’re doing keystrokes now, toggle clipping
+							# … and since we’re doing keystrokes now, toggles are possible
+						"t")
+							case ${TBAR} in
+								true) TBAR=false ;;
+								false) TBAR=true ;;
+							esac
+							;;
 						"w")
 							case "${CLIPPER}" in
 								'cut -c-')
