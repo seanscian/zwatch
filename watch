@@ -140,7 +140,6 @@ function zwatch {
 		printf '\033[1;1H'
 	do
 		() {
-	trap 'printf "\n"; return 130' INT
 				# This looks wrong, but it needed to be this granular for the INT
 				# trap, then I just decided to use it for other things.
 			for ((clock=0;clock<$((${TICKS}*10));clock++))
