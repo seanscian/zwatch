@@ -3,7 +3,7 @@
 	# This is why zsh’s $'…' quoting is present, like $'s/\011/     /g'.
 
 function zwatch {
-	local TBAR TICKS ROSE RANCOR HOSTIME XTRA KEY clock VERSION OPTARG TIK CLIPPER COMMND
+	local TBAR TICKS ROSE RANCOR HOSTIME XTRA KEY clock VERSION OPTARG TIK CLIPPER COMMND HASH
 		# Establish defaults based on behavior observed in watch from procps-
 		# ng 4.0.7: 2s default, title bar, and read the top of the command
 		# output.
@@ -24,6 +24,7 @@ function zwatch {
 
 			Options:
 			  -f, --follow           Follow the output and don’t clear screen
+			  -g, --chgexit          exit when output from command changes
 			  -n, --interval <secs>  seconds to wait between updates
 			  -t, --no-title         turn off header
 			  -w, --no-wrap          turn off line wrapping
@@ -50,9 +51,12 @@ function zwatch {
 		printf '\033[?25h'
 	}
 
-	while getopts :wfvhtn:-: XTRA
+	while getopts :gwfvhtn:-: XTRA
 	do
 		case ${XTRA} in
+			"g")
+				local CHXIT='g'
+				;;
 			"w")
 				CLIPPER='cut -c-'
 				;;
@@ -90,6 +94,9 @@ function zwatch {
 			'-')
 					# The cheap way of implementing long options
 				case "${OPTARG}" in
+					"chgexit")
+						local CHXIT='g'
+						;;
 					"no-wrap")
 						CLIPPER='cut -c-'
 						;;
@@ -144,6 +151,17 @@ function zwatch {
 		printf '\033[1;1H'
 	do
 		() {
+			if [[ -n ${CHXIT} ]]
+			then
+				local NEWHASH=$(md5 -q "${1}")
+				if [[ -z ${HASH} ]]
+				then
+					HASH=${NEWHASH}
+				else
+					[[ ${CHXIT} == "g" && ${HASH} != ${NEWHASH} ]] && break
+				fi
+			fi
+
 				# This looks wrong, but it needed to be this granular for the INT
 				# trap, then I just decided to use it for other things.
 			for ((clock=0;clock<$((${TICKS}*10));clock++))
@@ -166,7 +184,7 @@ function zwatch {
 				awk -v lines="${LINES}" -v title="${TBAR}" -v cols="${COLUMNS}" 'NR>1 {printf "\n"} {printf "%s%s", $0, (length($0) < cols ? "\033[K" : "")} END { nextrow = NR + (title == "true" ? 2 : 1); if (nextrow <= lines) printf "\033[%d;1H\033[J", nextrow}'
 
 					# wait for 0.1s for a single keypress…
-				if read -s -k 1 -t 0.1 KEY
+				if read -s -k -t 0.1 KEY
 				then
 					case ${KEY} in
 							# … and exit if it’s a “q”
@@ -178,22 +196,8 @@ function zwatch {
 						"+") (( TICKS += 1 )) ;;
 						"-") (( TICKS = TICKS > 1 ? TICKS-1 : 0.1 )) ;;
 						"n") (( TICKS = 2 )) ;;
-						"t")
-							case ${TBAR} in
-								true) TBAR=false ;;
-								false) TBAR=true ;;
-							esac
-							;;
-						"w")
-							case "${CLIPPER}" in
-								'cut -c-')
-									CLIPPER='fold -w'
-									;;
-								'fold -w')
-									CLIPPER='cut -c-'
-									;;
-							esac
-							;;
+						"t") ${TBAR} && TBAR=false || TBAR=true ;;
+						"w") [[ ${CLIPPER} == 'cut -c-' ]] && CLIPPER='fold -w' || CLIPPER='cut -c-' ;;
 					esac
 				fi
 			done
