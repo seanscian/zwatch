@@ -33,7 +33,9 @@ function zwatch {
 			 -v, --version  output version information and exit
 
 			Some Options can be toggled while ${1:t} is running:
-			  ‘n’ resets interval to 2.0s; + and - to increase/decrease by 1s
+			  ‘f’ toggles output following
+			  ‘+’ and ‘-’ increase/decrease interval by 1s
+			  ‘n’ resets interval to 2.0s
 			  ‘t’ toggles header
 			  ‘w’ toggles line wrapping
 
@@ -198,6 +200,7 @@ function zwatch {
 						"n") (( TICKS = 2 )) ;;
 						"t") ${TBAR} && TBAR=false || TBAR=true ;;
 						"w") [[ ${CLIPPER} == 'cut -c-' ]] && CLIPPER='fold -w' || CLIPPER='cut -c-' ;;
+						"f") [[ ${RANCOR} == 'tail' ]] && RANCOR="head" || RANCOR="tail"
 					esac
 				fi
 			done
