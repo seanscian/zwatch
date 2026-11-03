@@ -2,7 +2,7 @@
 	# escape, because I want this human-readable and survive copy-paste.
 	# This is why zsh’s $'…' quoting is present, like $'s/\011/     /g'.
 
-function zwatch {
+function ${${0:t}##.} {
 	local TBAR TICKS ROSE RANCOR HOSTIME XTRA KEY clock VERSION OPTARG TIK CLIPPER COMMND HASH
 		# Establish defaults based on behavior observed in watch from procps-
 		# ng 4.0.7: 2s default, title bar, and read the top of the command
